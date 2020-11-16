@@ -16,13 +16,14 @@ def gen_reader_sample(n, com):
 	lean_map = {-1:"left", -0.5:"lean left", 0:"center", 0.5:"lean right", 1:"right"}
 
 	reader_df = pd.concat([reader_df, pd.DataFrame(columns=sources)], sort=True)
-
+	leanings = [-1, -0.5, 0, 0.5, 1]
 	for src in sources:
-		reader_df.loc[reader_df.leaning == -1, src] = com.loc[com.source == src, lean_map[-1]].values[0]
-		reader_df.loc[reader_df.leaning == -0.5, src] = com.loc[com.source == src, lean_map[-0.5]].values[0]
-		reader_df.loc[reader_df.leaning == 0, src] = com.loc[com.source == src, lean_map[0]].values[0]
-		reader_df.loc[reader_df.leaning == 0.5, src] = com.loc[com.source == src, lean_map[0.5]].values[0]
-		reader_df.loc[reader_df.leaning == 1, src] = com.loc[com.source == src, lean_map[1]].values[0]
+		for l in leanings:
+			reader_df.loc[reader_df.leaning == l, src] = com.loc[com.source == src, lean_map[l]].values[0]
+		# reader_df.loc[reader_df.leaning == -0.5, src] = com.loc[com.source == src, lean_map[-0.5]].values[0]
+		# reader_df.loc[reader_df.leaning == 0, src] = com.loc[com.source == src, lean_map[0]].values[0]
+		# reader_df.loc[reader_df.leaning == 0.5, src] = com.loc[com.source == src, lean_map[0.5]].values[0]
+		# reader_df.loc[reader_df.leaning == 1, src] = com.loc[com.source == src, lean_map[1]].values[0]
 
 		# reader_df.loc[reader_df.leaning == -1, src]
 		# says: "select src from reader_df where leaning = -1"
@@ -53,7 +54,7 @@ def main():
 	common = media_trust.merge(src_bias_df, on="source")
 	print(common)
 	reader_df = gen_reader_sample(n, common)
-
+	print(reader_df.head())
 
 
 if __name__ == "__main__":
