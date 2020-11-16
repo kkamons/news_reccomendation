@@ -20,10 +20,6 @@ def gen_reader_sample(n, com):
 	for src in sources:
 		for l in leanings:
 			reader_df.loc[reader_df.leaning == l, src] = com.loc[com.source == src, lean_map[l]].values[0]
-		# reader_df.loc[reader_df.leaning == -0.5, src] = com.loc[com.source == src, lean_map[-0.5]].values[0]
-		# reader_df.loc[reader_df.leaning == 0, src] = com.loc[com.source == src, lean_map[0]].values[0]
-		# reader_df.loc[reader_df.leaning == 0.5, src] = com.loc[com.source == src, lean_map[0.5]].values[0]
-		# reader_df.loc[reader_df.leaning == 1, src] = com.loc[com.source == src, lean_map[1]].values[0]
 
 		# reader_df.loc[reader_df.leaning == -1, src]
 		# says: "select src from reader_df where leaning = -1"
