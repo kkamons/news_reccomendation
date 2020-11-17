@@ -95,7 +95,8 @@ def main():
 
 	prob_to_read = calc_prob_reading(reader_leaning, reader_trust, source_leaning)
 	print("Probability to Read: ", prob_to_read)
-	source_is_read = np.random.choice(a=[True,False],size=1,p=[prob_to_read,1-prob_to_read])
+	source_is_read = np.random.choice(a=[True,False],size=1,p=[prob_to_read,1-prob_to_read])[0]
+	print(source_is_read)
 # TODO:
 # X CalcProbOfReading()
 # CalcProbOfTrusting()
