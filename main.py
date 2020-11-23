@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from pathlib import Path, PureWindowsPath
 
 show_fig = True
-num_trials = 10
+num_trials = 100
 num_readers=100
 debug = False
 lean_map = {-1:"left", -0.5:"lean left", 0:"center", 0.5:"lean right", 1:"right"}
@@ -36,13 +36,14 @@ def gen_reader_sample(n, com):
 def getSource(media_df, reader_leaning):
 	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
 	src_bias = [-0.5, 0, 0.5]
+	# print(rounded_leaning)
 	# if we want readers to tend towards center then we should select sources that are more center than where they are:
 	if rounded_leaning != 0:
 		# because we can go out of range <-1 and >1
 		if rounded_leaning < 0:
-			src_bias = [max(np.sign(rounded_leaning)*0.5+rounded_leaning, -1), rounded_leaning]
+			src_bias = [max(-np.sign(rounded_leaning)*0.5+rounded_leaning, -1)]
 		else:
-			src_bias = [min(np.sign(rounded_leaning)*0.5+rounded_leaning, 1), rounded_leaning]
+			src_bias = [min(-np.sign(rounded_leaning)*0.5+rounded_leaning, 1)]
 	# print(src_bias)
 	sources = media_df["source"].loc[media_df["bias"].isin(src_bias)]
 	# sources = media_df["source"]
@@ -65,10 +66,13 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 	# prob = np.random.normal(reader_trust- abs(reader_leaning-source_leaning), variance,1)[0]
 	noise = np.random.normal(0,variance,1)[0]
 	prob = 1-abs(reader_leaning - source_leaning)+ noise
+
 	if prob > 0.5:
 		prob = min(prob,1)
 	else:
 		prob = max(prob,0)
+
+	prob = np.random.binomial(1,prob,1)[0]
 	# prob = (reader_trust - abs(reader_leaning-source_leaning) + noise)#/(reader_trust + abs(reader_leaning-source_leaning) + abs(noise))
 	'''
 	p(read | trust) = p(trust | read)p(read)/p(trust)
@@ -107,7 +111,9 @@ def recalc_leaning(reader_leaning, new_reader_trust,source_leaning):
 	# 	return reader_leaning + np.sign(reader_leaning)*0.1
 	# else:
 	# 	return reader_leaning
-	return reader_leaning + np.sign(reader_leaning)*0.03
+	variance = 0.05
+	noise = np.random.normal(0,variance,1)[0]
+	return reader_leaning + ((np.sign(reader_leaning))+noise)*0.1
 
 	
 	# return (reader_leaning - source_leaning)
@@ -119,8 +125,8 @@ def gen_before_after(first, last):
 	bins1 = np.linspace(math.ceil(min(first)),
 		math.floor(max(first)),
 		10)
-	bins2 = np.linspace(math.ceil(min(last)),
-		math.floor(max(last)),
+	bins2 = np.linspace(min(last),
+		max(last),
 		10)
 
 	fig = plt.figure()
@@ -207,6 +213,12 @@ def main():
 				
 			else:
 				if debug: print("Fake news!")
+
+		min_lean = reader_df.leaning.min()
+		max_lean = reader_df.leaning.max()
+
+		# keep it between -1 and 1
+		reader_df["leaning"] = 2*(reader_df["leaning"])/(max_lean-min_lean)
 	# print(reader_df.bias.values)
 	# print("the thing")
 	# percent_left = len(reader_df[reader_df.bias < -0.75].bias.values)/n
