@@ -5,6 +5,7 @@ import math
 from matplotlib import pyplot as plt
 from pathlib import Path, PureWindowsPath
 
+show_fig = True
 num_trials = 10
 num_readers=100
 debug = False
@@ -29,10 +30,22 @@ def gen_reader_sample(n, com):
 		# says: "select src from reader_df where leaning = -1"
 
 	return reader_df
+
 #Currently this function is dumb and just randomly selects a media outlet to recommend to a reader
 # Later this could be changed to recommend specific sources based of the readers political leaning
-def getSource(media_df):
-	sources = media_df["source"]
+def getSource(media_df, reader_leaning):
+	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
+	src_bias = [-0.5, 0, 0.5]
+	# if we want readers to tend towards center then we should select sources that are more center than where they are:
+	if rounded_leaning != 0:
+		# because we can go out of range <-1 and >1
+		if rounded_leaning < 0:
+			src_bias = [max(np.sign(rounded_leaning)*0.5+rounded_leaning, -1), rounded_leaning]
+		else:
+			src_bias = [min(np.sign(rounded_leaning)*0.5+rounded_leaning, 1), rounded_leaning]
+	# print(src_bias)
+	sources = media_df["source"].loc[media_df["bias"].isin(src_bias)]
+	# sources = media_df["source"]
 	return np.random.choice(a=sources)
 
 def gen_src_bias(src):
@@ -119,7 +132,10 @@ def gen_before_after(first, last):
 	plt.xlim([min(last), max(last)])
 	plt.hist(last, bins = bins2, alpha = 0.5)
 	plt.title("After")
+	fig.suptitle("{} trails for {} readers".format(num_trials, num_readers))
 	plt.show()
+
+
 def main():
 	mac=False
 # Big sad the path shit dont work but its fine
@@ -159,7 +175,8 @@ def main():
 			if debug: print("============================ new reader ======================================")
 		# Get the source to recommend to the reader
 		# reader = 0.0
-			rec_source = getSource(media_frame)
+			reader_leaning = reader_df.leaning[reader]
+			rec_source = getSource(media_frame, reader_leaning)
 			if debug: print("Source: ",rec_source)
 			# Calc prob of reader reading source
 			reader_leaning = reader_df.leaning[reader]
@@ -206,7 +223,7 @@ def main():
 	# print(percent_right)
 	# print(reader_df[reader_df.bias > 0.5].bias.values)
 
-	gen_before_after(leaning_prog[0], leaning_prog[-1])
+	if show_fig: gen_before_after(leaning_prog[0], leaning_prog[-1])
 
 	
 # TODO:
