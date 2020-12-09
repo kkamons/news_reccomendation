@@ -6,8 +6,9 @@ from matplotlib import pyplot as plt
 from pathlib import Path, PureWindowsPath
 
 show_fig = True
-num_trials = 500
+num_trials = 300
 num_readers=1000
+recommendation = "Engagement"#"LikelytoRead"#"Moderate"
 debug = False
 lean_map = {-1:"left", -0.5:"lean left", 0:"center", 0.5:"lean right", 1:"right"}
 def gen_reader_sample(n, com):
@@ -43,13 +44,31 @@ def recMoreModerate(media_df, reader_leaning):
 		else:
 			src_bias = [0,0.5]
 	# print(src_bias)
-	sources = media_df["source"].loc[media_df["bias"].isin(src_bias)]
+	chosenBias = np.random.choice(src_bias)
+	sources = media_df["source"].loc[media_df["bias"] == chosenBias]
+	# sources = media_df["source"]
+	return np.random.choice(a=sources)
+
+def recEngagement(media_df, reader_leaning):
+	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
+	src_bias = [-0.5, 0, 0.5]
+	# print(rounded_leaning)
+	# if we want readers to tend towards center then we should select sources that are more center than where they are:
+	if rounded_leaning != 0:
+		# because we can go out of range <-1 and >1
+		if rounded_leaning < 0:
+			src_bias = [-0.5,-1]
+		else:
+			src_bias = [1,0.5]
+	# print(src_bias)
+	chosenBias = np.random.choice(src_bias)
+	sources = media_df["source"].loc[media_df["bias"] == chosenBias]
 	# sources = media_df["source"]
 	return np.random.choice(a=sources)
 
 def recMostLikelyToRead(media_df, reader_leaning):
 	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
-	sources = media_df["source"].loc[media_df["bias"].isin(rounded_leaning)]
+	sources = media_df["source"].loc[media_df["bias"] ==rounded_leaning]
 	return np.random.choice(a=sources)
 
 #Currently this function is dumb and just randomly selects a media outlet to recommend to a reader
@@ -57,12 +76,13 @@ def recMostLikelyToRead(media_df, reader_leaning):
 def getSource(media_df, reader_leaning,recMethod):
 	if recMethod == "Moderate":
 		rec = recMoreModerate(media_df, reader_leaning)
-	elif recMethod == "Random":
-		rec = np.random.choice(media_df["source"])
+	elif recMethod == "Engagement":
+		rec = recEngagement(media_df, reader_leaning)
 	elif recMethod == "LikelyToRead":
-		rec = np.random.choice(media_df["source"])
+		rec = recMostLikelyToRead(media_df, reader_leaning)
 	else:
-		rec = np.random.choice(media_df["source"])
+		chosenBias = np.random.choice([-1.0,-0.5,0.0,0.5,1.0])
+		rec = np.random.choice(media_df["source"].loc[media_df["bias"] ==chosenBias])
 	return rec
 
 def gen_src_bias(src):
@@ -85,7 +105,7 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 	# prob = 1-((abs(reader_leaning - source_leaning)/2)+0.5)+ noise
 	# sqrt((a-b)^2)
 
-	if abs(reader_leaning-source_leaning) < 0.5:
+	if abs(reader_leaning-source_leaning) < 1:
 		prob = 1-((abs(reader_leaning - source_leaning)/2))+ noise + reader_trust/2
 	else:
 		prob = noise
@@ -167,7 +187,7 @@ def gen_before_after(first, last):
 	plt.xlim([min(last), max(last)])
 	plt.hist(last, bins = bins2, alpha = 0.5)
 	plt.title("After")
-	fig.suptitle("{} trails for {} readers".format(num_trials, num_readers))
+	fig.suptitle("Recommendation System {}: {} trails for {} readers".format(recommendation,num_trials, num_readers))
 	plt.show()
 
 
@@ -212,7 +232,7 @@ def main():
 		# reader = 0.0
 			reader_leaning = reader_df.leaning[reader]
 			rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
-			rec_source = getSource(media_frame, reader_leaning, "Moderate")
+			rec_source = getSource(media_frame, reader_leaning, recommendation)
 			if debug: print("Source: ",rec_source)
 			# Calc prob of reader reading source
 			if debug: print("Reader Leaning:",reader_leaning)#, lean_map[reader_leaning])
