@@ -81,11 +81,14 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 	#If the farther the media outlet sits from the viewer_leaning, the less likely they will be to read
 	# prob = np.random.normal(reader_trust- abs(reader_leaning-source_leaning), variance,1)[0]
 	noise = np.random.normal(0,variance,1)[0]
+
 	# prob = 1-((abs(reader_leaning - source_leaning)/2)+0.5)+ noise
 	# sqrt((a-b)^2)
-	prob = 1-((abs(reader_leaning - source_leaning)/2))+ noise + reader_trust/2
 
-
+	if abs(reader_leaning-source_leaning) < 0.5:
+		prob = 1-((abs(reader_leaning - source_leaning)/2))+ noise + reader_trust/2
+	else:
+		prob = noise
 	if prob > 0.5:
 		prob = min(prob,1)
 	else:
