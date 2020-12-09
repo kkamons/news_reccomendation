@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from pathlib import Path, PureWindowsPath
 
 show_fig = True
-num_trials = 50
+num_trials = 500
 num_readers=1000
 debug = False
 lean_map = {-1:"left", -0.5:"lean left", 0:"center", 0.5:"lean right", 1:"right"}
@@ -31,9 +31,7 @@ def gen_reader_sample(n, com):
 
 	return reader_df
 
-#Currently this function is dumb and just randomly selects a media outlet to recommend to a reader
-# Later this could be changed to recommend specific sources based of the readers political leaning
-def getSource(media_df, reader_leaning):
+def recMoreModerate(media_df, reader_leaning):
 	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
 	src_bias = [-0.5, 0, 0.5]
 	# print(rounded_leaning)
@@ -48,6 +46,24 @@ def getSource(media_df, reader_leaning):
 	sources = media_df["source"].loc[media_df["bias"].isin(src_bias)]
 	# sources = media_df["source"]
 	return np.random.choice(a=sources)
+
+def recMostLikelyToRead(media_df, reader_leaning):
+	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
+	sources = media_df["source"].loc[media_df["bias"].isin(rounded_leaning)]
+	return np.random.choice(a=sources)
+
+#Currently this function is dumb and just randomly selects a media outlet to recommend to a reader
+# Later this could be changed to recommend specific sources based of the readers political leaning
+def getSource(media_df, reader_leaning,recMethod):
+	if recMethod == "Moderate":
+		rec = recMoreModerate(media_df, reader_leaning)
+	elif recMethod == "Random":
+		rec = np.random.choice(media_df["source"])
+	elif recMethod == "LikelyToRead":
+		rec = np.random.choice(media_df["source"])
+	else:
+		rec = np.random.choice(media_df["source"])
+	return rec
 
 def gen_src_bias(src):
 	src.columns = ["source", "type", "bias", "url_src", "url_all"]
@@ -65,8 +81,10 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 	#If the farther the media outlet sits from the viewer_leaning, the less likely they will be to read
 	# prob = np.random.normal(reader_trust- abs(reader_leaning-source_leaning), variance,1)[0]
 	noise = np.random.normal(0,variance,1)[0]
-	prob = 1-((abs(reader_leaning - source_leaning)/2)+0.5)+ noise
+	# prob = 1-((abs(reader_leaning - source_leaning)/2)+0.5)+ noise
 	# sqrt((a-b)^2)
+	prob = 1-((abs(reader_leaning - source_leaning)/2))+ noise + reader_trust/2
+
 
 	if prob > 0.5:
 		prob = min(prob,1)
@@ -115,7 +133,7 @@ def recalc_leaning(reader_leaning, source_leaning, reader_trust):   #(reader_lea
 	# 	return reader_leaning
 	variance = 0.05
 	noise = np.random.normal(0,variance,1)[0]
-	new_leaning = reader_leaning + (abs(source_leaning - reader_leaning)/2)*np.sign(source_leaning)*.1 + noise
+	new_leaning = reader_leaning + (source_leaning - reader_leaning)/2*.1 + noise
 	if new_leaning > 1:
 		new_leaning = 1
 	elif new_leaning < -1:
@@ -151,7 +169,7 @@ def gen_before_after(first, last):
 
 
 def main():
-	mac=False
+	mac=True
 # Big sad the path shit dont work but its fine
 	if(mac):
 		demo_path = Path("projdata//Voter_Distribution_2016//Voter_demo_analysis_CSV.csv")
@@ -191,7 +209,7 @@ def main():
 		# reader = 0.0
 			reader_leaning = reader_df.leaning[reader]
 			rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
-			rec_source = getSource(media_frame, reader_leaning)
+			rec_source = getSource(media_frame, reader_leaning, "Moderate")
 			if debug: print("Source: ",rec_source)
 			# Calc prob of reader reading source
 			if debug: print("Reader Leaning:",reader_leaning)#, lean_map[reader_leaning])
