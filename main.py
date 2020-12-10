@@ -28,15 +28,11 @@ def gen_reader_sample(n, com):
 		for l in leanings:
 			reader_df.loc[reader_df.leaning == l, src] = com.loc[com.source == src, lean_map[l]].values[0]
 
-		# reader_df.loc[reader_df.leaning == -1, src]
-		# says: "select src from reader_df where leaning = -1"
-
 	return reader_df
 
 def recMoreModerate(media_df, reader_leaning):
 	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
 	src_bias = [-0.5, 0, 0.5]
-	# print(rounded_leaning)
 	# if we want readers to tend towards center then we should select sources that are more center than where they are:
 	if rounded_leaning != 0:
 		# because we can go out of range <-1 and >1
@@ -44,16 +40,15 @@ def recMoreModerate(media_df, reader_leaning):
 			src_bias = [-0.5,0]
 		else:
 			src_bias = [0,0.5]
-	# print(src_bias)
+
 	chosenBias = np.random.choice(src_bias)
 	sources = media_df["source"].loc[media_df["bias"] == chosenBias]
-	# sources = media_df["source"]
+
 	return np.random.choice(a=sources)
 
 def recEngagement(media_df, reader_leaning):
 	rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
 	src_bias = [-0.5, 0, 0.5]
-	# print(rounded_leaning)
 	# if we want readers to tend towards center then we should select sources that are more center than where they are:
 	if rounded_leaning != 0:
 		# because we can go out of range <-1 and >1
@@ -61,10 +56,9 @@ def recEngagement(media_df, reader_leaning):
 			src_bias = [-0.5,-1]
 		else:
 			src_bias = [1,0.5]
-	# print(src_bias)
+
 	chosenBias = np.random.choice(src_bias)
 	sources = media_df["source"].loc[media_df["bias"] == chosenBias]
-	# sources = media_df["source"]
 	return np.random.choice(a=sources)
 
 def recMostLikelyToRead(media_df, reader_leaning):
@@ -100,7 +94,7 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 	variance = 0.05
 	#If the viewer trusts the media outlet, they are more likely to read it
 	#If the farther the media outlet sits from the viewer_leaning, the less likely they will be to read
-	# prob = np.random.normal(reader_trust- abs(reader_leaning-source_leaning), variance,1)[0]
+
 	noise = np.random.normal(0,variance,1)[0]
 
 	if abs(reader_leaning-source_leaning) < 1:
@@ -123,8 +117,8 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 def calc_prob_trusting(reader_leaning, reader_trust, source_leaning):
 	variance = 0.05
 	noise = np.random.normal(0,variance,1)[0]
-	# prob = 1-((abs(reader_leaning - source_leaning)/2)+0.5)+ noise
-	prob = (reader_trust - abs(reader_leaning-source_leaning) + noise)#/(reader_trust + abs(reader_leaning)+abs(source_leaning) + abs(noise))
+
+	prob = (reader_trust - abs(reader_leaning-source_leaning) + noise)
 	if prob < 0:
 		prob = 0
 	if prob > 1:
@@ -136,10 +130,9 @@ def recalc_trust(reader_trusts_story, reader_trust):
 		new_reader_trust = reader_trust + 0.01
 	else:
 		new_reader_trust = reader_trust - 0.01
-	# print(new_reader_trust)
 	return new_reader_trust
 
-def recalc_leaning(reader_leaning, source_leaning, reader_trust):   #(reader_leaning, new_reader_trust,source_leaning):
+def recalc_leaning(reader_leaning, source_leaning, reader_trust):
 	variance = 0.05
 	noise = np.random.normal(0,variance,1)[0]
 	new_leaning = reader_leaning + ((source_leaning - reader_leaning)/2)*.01 + noise
