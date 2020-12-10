@@ -6,9 +6,10 @@ from matplotlib import pyplot as plt
 from pathlib import Path, PureWindowsPath
 
 show_fig = True
-num_trials = 300
+num_trials = 500
 num_readers=1000
-recommendation = "Engagement"#"LikelytoRead"#"Moderate"
+
+recommendation = sys.argv[1]#"Random"#"Engagement"#"LikelytoRead"#"Moderate"
 debug = False
 lean_map = {-1:"left", -0.5:"lean left", 0:"center", 0.5:"lean right", 1:"right"}
 def gen_reader_sample(n, com):
@@ -102,9 +103,6 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 	# prob = np.random.normal(reader_trust- abs(reader_leaning-source_leaning), variance,1)[0]
 	noise = np.random.normal(0,variance,1)[0]
 
-	# prob = 1-((abs(reader_leaning - source_leaning)/2)+0.5)+ noise
-	# sqrt((a-b)^2)
-
 	if abs(reader_leaning-source_leaning) < 1:
 		prob = 1-((abs(reader_leaning - source_leaning)/2))+ noise + reader_trust/2
 	else:
@@ -115,16 +113,10 @@ def calc_prob_reading(reader_leaning, reader_trust, source_leaning):
 		prob = max(prob,0)
 
 	prob = np.random.binomial(1,prob,1)[0]
-	# prob = (reader_trust - abs(reader_leaning-source_leaning) + noise)#/(reader_trust + abs(reader_leaning-source_leaning) + abs(noise))
 	'''
 	p(read | trust) = p(trust | read)p(read)/p(trust)
 	p(trust | read)= reader_trust, p(read) = 1-abs(reader_leaning-source_leaning)+noise, p(trust) = 
 	'''
-	# print(prob)
-	# if prob < 0:
-	# 	prob = 0
-	# if prob > 1:
-	# 	prob = 1	
 	return prob
 
 
@@ -148,25 +140,15 @@ def recalc_trust(reader_trusts_story, reader_trust):
 	return new_reader_trust
 
 def recalc_leaning(reader_leaning, source_leaning, reader_trust):   #(reader_leaning, new_reader_trust,source_leaning):
-	# if (reader_leaning - source_leaning) <=0.5:
-	# 	return reader_leaning + np.sign(reader_leaning)*0.05
-	# elif (reader_leaning - source_leaning) < 0.1:
-	# 	return reader_leaning + np.sign(reader_leaning)*0.1
-	# else:
-	# 	return reader_leaning
 	variance = 0.05
 	noise = np.random.normal(0,variance,1)[0]
-	new_leaning = reader_leaning + (source_leaning - reader_leaning)/2*.1 + noise
+	new_leaning = reader_leaning + ((source_leaning - reader_leaning)/2)*.01 + noise
 	if new_leaning > 1:
 		new_leaning = 1
 	elif new_leaning < -1:
 		new_leaning = -1
 	return new_leaning
-	# return reader_leaning + ((np.sign(source_leaning)))*0.1 + noise
 
-	
-	# return (reader_leaning - source_leaning)
-	# return source_leaning*new_reader_trust
 
 
 def gen_before_after(first, last):
@@ -187,13 +169,13 @@ def gen_before_after(first, last):
 	plt.xlim([min(last), max(last)])
 	plt.hist(last, bins = bins2, alpha = 0.5)
 	plt.title("After")
-	fig.suptitle("Recommendation System {}: {} trails for {} readers".format(recommendation,num_trials, num_readers))
-	plt.show()
+	fig.suptitle("{} Recommendation System: {} Articles for {} Readers".format(recommendation,num_trials, num_readers))
+	# plt.show()
+	plt.savefig("{}_RecSystem{}Articles_{}Readers.png".format(recommendation,num_trials, num_readers))
 
 
 def main():
 	mac=True
-# Big sad the path shit dont work but its fine
 	if(mac):
 		demo_path = Path("projdata//Voter_Distribution_2016//Voter_demo_analysis_CSV.csv")
 		all_path = Path("projdata//Sources_Political_Leanings//all.csv")
@@ -215,12 +197,7 @@ def main():
 	# print(media_frame)
 	#This will generate a sample of readers
 	reader_df = gen_reader_sample(num_readers, media_frame)
-	# print(reader_df.head())
-	# reader_df.loc[reader_df.leaning == -1, src]
-	# says: "select src from reader_df where leaning = -1"
 	readers = reader_df["reader_id"].unique()
-	# print('+++++++++++++++++ ', reader_df.head())
-	# print(reader_df)
 	leaning_prog = []
 	for i in range(num_trials):
 		if debug: print('________________________________________New Trial__________________________________________________')
@@ -229,15 +206,12 @@ def main():
 		for reader in readers:
 			if debug: print("============================ new reader ======================================")
 		# Get the source to recommend to the reader
-		# reader = 0.0
 			reader_leaning = reader_df.leaning[reader]
 			rounded_leaning = round(reader_leaning*2)/2 # if we want to use the map, then we need to round the leaning
 			rec_source = getSource(media_frame, reader_leaning, recommendation)
 			if debug: print("Source: ",rec_source)
 			# Calc prob of reader reading source
 			if debug: print("Reader Leaning:",reader_leaning)#, lean_map[reader_leaning])
-			# reader_trust = media_frame.loc[media_frame.source == rec_source, lean_map[reader_leaning]].values[0]
-			# reader_trust = reader_df.loc[reader_df.reader_id == reader, rec_source].values[0]
 			reader_trust = media_frame.loc[media_frame.source == rec_source, lean_map[rounded_leaning]].values[0]
 
 
@@ -246,18 +220,10 @@ def main():
 			if debug: print("Source Bias: ",source_leaning)
 
 			source_is_read = calc_prob_reading(reader_leaning, reader_trust, source_leaning)
-			# if debug: print("Probability to Read: ", prob_to_read)
-			# source_is_read = np.random.choice(a=[True,False],size=1,p=[prob_to_read,1-prob_to_read])[0]
+
 			if(source_is_read):
 				if debug: print("Article Read")
 				#calc prob of trusting
-				# prob_trust = calc_prob_trusting(reader_leaning, reader_trust, source_leaning)
-				# if debug: print("Probability to Trust Source: ", prob_trust)
-				# reader_trusts_story = np.random.choice(a=[True,False],size=1,p=[prob_trust,1-prob_trust])[0]
-				#recalc trust level
-				# new_trust_level = recalc_trust(reader_trusts_story, reader_trust)
-				# reader_df.loc[reader_df.reader_id == reader, rec_source] = new_trust_level
-				#reCalcPolLeaning - im thinking this should be harder to change than the trust level in the media outlet
 				reader_df.loc[reader_df.reader_id == reader, "leaning"] = recalc_leaning(reader_leaning, source_leaning, reader_trust)#new_trust_level,source_leaning)
 				if debug: print("New Leaning: ", reader_df.loc[reader_df.reader_id == reader, "leaning"].values[0])
 				
@@ -269,34 +235,8 @@ def main():
 
 		# keep it between -1 and 1
 		reader_df["leaning"] = 2*(reader_df["leaning"])/(max_lean-min_lean)
-	# print(reader_df.bias.values)
-	# print("the thing")
-	# percent_left = len(reader_df[reader_df.bias < -0.75].bias.values)/n
-	# condition = (reader_df.bias < -0.25 and reader_df.bias >= -0.75)
-	# print("condition: ",condition)
-	# percent_lean_left = len(reader_df[condition].bias.values)/n
-	# percent_center = len(reader_df[reader_df.bias < 0.25 and reader_df.bias >= -0.25].bias.values)/n
-	# percent_lean_right = len(reader_df[reader_df.bias < 0.75 and reader_df.bias >= 0.25].bias.values)/n
-	# percent_right = len(reader_df[reader_df.bias >= 0.75].bias.values)/n
-	# print(percent_left)
-	# print(percent_lean_left)
-	# print(percent_center)
-	# print(percent_lean_right)
-	# print(percent_right)
-	# print(reader_df[reader_df.bias > 0.5].bias.values)
 
 	if show_fig: gen_before_after(leaning_prog[0], leaning_prog[-1])
-
-	
-# TODO:
-# X CalcProbOfReading()
-# X CalcProbOfTrusting()
-# X ReCalcTrustLevel() - calculate the trust level of the recommended media outlet
-# X ReCalcPolLeaning() - base off leaning of media outlet and whether they trusted, if they trusted then it will effect their belief in the direction of the media outlet, if they dont it may polarize them.
-# Make the algorithm less dumb
-# recalculate the percentage in each quandrant
-# Print a histogram of distribution before and after the stuff
-# NORMALIZE Probabilites
 
 
 if __name__ == "__main__":
